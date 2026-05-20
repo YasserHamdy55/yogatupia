@@ -384,13 +384,31 @@ export const AuthProvider = ({ children }) => {
     console.warn("[auth] setUserActive is not implemented in Phase 1.");
   }, []);
 
-  const deleteUser = useCallback(async (userId) => {
-    const { error } = await supabase.from("profiles").delete().eq("id", userId);
+
+  // Delete user from Supabase Auth via admin-only edge function.
+  const deleteUserFromAuth = async (userId) => {
+    const { data, error } = await supabase.functions.invoke("delete-user", {
+      body: { userId },
+    });
     if (error) {
-      // eslint-disable-next-line no-console
-      console.error("[auth] deleteUser failed", error);
-      return;
+      throw new Error(error.message || "Failed to delete user from auth");
     }
+    if (data?.error) {
+      throw new Error(data.error);
+    }
+  };
+
+  const deleteUser = useCallback(async (userId) => {
+    // Delete from Supabase Auth (Edge Function)
+    try {
+      await deleteUserFromAuth(userId);
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.error("[auth] deleteUserFromAuth failed", err);
+      throw err;
+    }
+    // In most setups, deleting auth user also removes profile via FK/trigger.
+    // Keep local state in sync immediately.
     setUsers((prev) => prev.filter((u) => u.id !== userId));
   }, []);
 

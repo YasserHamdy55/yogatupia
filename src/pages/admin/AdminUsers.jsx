@@ -53,6 +53,7 @@ const TEXT = {
     cannotDeleteSelf: "You cannot delete yourself.",
     confirmDelete: "Re-enter your password to delete this user.",
     saveFailed: "Could not save changes.",
+    deleteFailed: "Could not delete this user.",
   },
   ar: {
     title: "المستخدمون",
@@ -89,6 +90,7 @@ const TEXT = {
     cannotDeleteSelf: "لا يمكنك حذف نفسك.",
     confirmDelete: "أعد إدخال كلمة المرور لحذف هذا المستخدم.",
     saveFailed: "تعذر حفظ التعديلات.",
+    deleteFailed: "تعذر حذف هذا المستخدم.",
   },
 };
 
@@ -175,8 +177,13 @@ const AdminUsers = () => {
     setPendingDeleteId(user.id);
   };
 
-  const confirmDelete = () => {
-    if (pendingDeleteId) deleteUser(pendingDeleteId);
+  const confirmDelete = async () => {
+    if (!pendingDeleteId) return;
+    try {
+      await deleteUser(pendingDeleteId);
+    } catch (err) {
+      window.alert(err?.message || t.deleteFailed);
+    }
   };
 
   const copySignupLink = async () => {
