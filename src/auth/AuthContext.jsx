@@ -150,7 +150,7 @@ export const AuthProvider = ({ children }) => {
           whatsapp: p.phone || "",
           phone: p.phone || "",
           displayName: p.full_name || "",
-          email: "",
+          email: p.email || "",
           role: mapDbRoleToAppRole(p.role),
           dbRole: p.role,
           active: true,
@@ -268,6 +268,67 @@ export const AuthProvider = ({ children }) => {
               displayName: dbPatch.full_name ?? u.displayName,
               phone: dbPatch.phone ?? u.phone,
               whatsapp: dbPatch.phone ?? u.whatsapp,
+              email: dbPatch.email ?? u.email,
+            }
+          : u,
+      ),
+    );
+  }, []);
+
+  // Admin: update auth-level fields (email/password) through edge function,
+  // then sync profile-level fields (name/phone/role/email).
+  const updateUserByAdmin = useCallback(async (userId, patch) => {
+    const nextEmail = (patch.email || "").trim().toLowerCase();
+    const nextPassword = patch.temporaryPassword || "";
+    const nextRole = patch.role;
+
+    if (nextEmail || nextPassword) {
+      const { data, error } = await supabase.functions.invoke(
+        "update-user-account",
+        {
+          body: {
+            userId,
+            email: nextEmail || undefined,
+            temporaryPassword: nextPassword || undefined,
+          },
+        },
+      );
+      if (error) {
+        throw new Error(error.message || "Could not update auth account.");
+      }
+      if (data?.error) {
+        throw new Error(data.error);
+      }
+    }
+
+    const dbPatch = {};
+    if ("displayName" in patch) dbPatch.full_name = patch.displayName;
+    if ("phone" in patch) dbPatch.phone = patch.phone;
+    if ("whatsapp" in patch) dbPatch.phone = patch.whatsapp;
+    if (nextEmail) dbPatch.email = nextEmail;
+    if (nextRole) dbPatch.role = mapAppRoleToDbRole(nextRole);
+
+    if (Object.keys(dbPatch).length > 0) {
+      const { error } = await supabase
+        .from("profiles")
+        .update(dbPatch)
+        .eq("id", userId);
+      if (error) {
+        throw error;
+      }
+    }
+
+    setUsers((prev) =>
+      prev.map((u) =>
+        u.id === userId
+          ? {
+              ...u,
+              displayName: dbPatch.full_name ?? u.displayName,
+              phone: dbPatch.phone ?? u.phone,
+              whatsapp: dbPatch.phone ?? u.whatsapp,
+              email: dbPatch.email ?? u.email,
+              role: nextRole ?? u.role,
+              dbRole: dbPatch.role ?? u.dbRole,
             }
           : u,
       ),
@@ -311,6 +372,15 @@ export const AuthProvider = ({ children }) => {
           // eslint-disable-next-line no-console
           console.warn("[auth] could not assign role to new user", roleErr);
         }
+      }
+
+      const { error: profileSyncErr } = await supabase
+        .from("profiles")
+        .update({ email })
+        .eq("id", newUserId);
+      if (profileSyncErr) {
+        // eslint-disable-next-line no-console
+        console.warn("[auth] could not persist email on profile", profileSyncErr);
       }
 
       // Refresh the local users list.
@@ -430,6 +500,7 @@ export const AuthProvider = ({ children }) => {
       updateCurrentUser,
       setUserRole,
       updateUserProfile,
+      updateUserByAdmin,
       createUser,
       setUserActive,
       deleteUser,
@@ -451,6 +522,7 @@ export const AuthProvider = ({ children }) => {
       updateCurrentUser,
       setUserRole,
       updateUserProfile,
+      updateUserByAdmin,
       createUser,
       setUserActive,
       deleteUser,

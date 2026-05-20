@@ -101,13 +101,19 @@ const AdminUsers = () => {
     users,
     currentUser,
     setUserRole,
-    updateUserProfile,
+    updateUserByAdmin,
     createUser,
     deleteUser,
   } = useAuth();
   const [pendingDeleteId, setPendingDeleteId] = useState(null);
   const [editingId, setEditingId] = useState(null);
-  const [editDraft, setEditDraft] = useState({ displayName: "", phone: "" });
+  const [editDraft, setEditDraft] = useState({
+    displayName: "",
+    email: "",
+    phone: "",
+    temporaryPassword: "",
+    role: ROLES.CLIENT,
+  });
   const [copied, setCopied] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
   const [addDraft, setAddDraft] = useState({
@@ -144,25 +150,57 @@ const AdminUsers = () => {
     setEditingId(u.id);
     setEditDraft({
       displayName: u.displayName || "",
+      email: u.email || "",
       phone: u.phone || u.whatsapp || "",
+      temporaryPassword: "",
+      role: u.role || ROLES.CLIENT,
     });
   };
 
   const cancelEdit = () => {
     setEditingId(null);
-    setEditDraft({ displayName: "", phone: "" });
+    setEditDraft({
+      displayName: "",
+      email: "",
+      phone: "",
+      temporaryPassword: "",
+      role: ROLES.CLIENT,
+    });
   };
 
   const saveEdit = async (u) => {
     try {
-      await updateUserProfile(u.id, {
+      if (editDraft.temporaryPassword && editDraft.temporaryPassword.length < 6) {
+        window.alert("Temporary password must be at least 6 characters.");
+        return;
+      }
+      await updateUserByAdmin(u.id, {
         displayName: editDraft.displayName,
+        email: editDraft.email,
         phone: editDraft.phone,
+        temporaryPassword: editDraft.temporaryPassword,
+        role: editDraft.role,
       });
       cancelEdit();
     } catch {
       window.alert(t.saveFailed);
     }
+  };
+
+  const handleEditRoleChange = (user, nextRole) => {
+    if (user.id === currentUser?.id && nextRole !== ROLES.ADMIN) {
+      window.alert(t.cannotDemoteSelf);
+      return;
+    }
+    if (
+      user.role === ROLES.ADMIN &&
+      nextRole !== ROLES.ADMIN &&
+      adminCount <= 1
+    ) {
+      window.alert(t.cannotRemoveLastAdmin);
+      return;
+    }
+    setEditDraft((d) => ({ ...d, role: nextRole }));
   };
 
   const requestDelete = (user) => {
@@ -294,7 +332,9 @@ const AdminUsers = () => {
           <thead className="bg-sand-50">
             <tr className="text-left rtl:text-right text-sage-700">
               <th className="px-4 py-3">{t.name}</th>
+              <th className="px-4 py-3">{t.email}</th>
               <th className="px-4 py-3">{t.whatsapp}</th>
+              <th className="px-4 py-3">{t.password}</th>
               <th className="px-4 py-3">{t.role}</th>
               <th className="px-4 py-3">{t.actions}</th>
             </tr>
@@ -323,6 +363,20 @@ const AdminUsers = () => {
                   </td>
                   <td className="px-4 py-3 text-sage-800 min-w-[260px]">
                     {isEditing ? (
+                      <input
+                        type="email"
+                        value={editDraft.email}
+                        onChange={(e) =>
+                          setEditDraft((d) => ({ ...d, email: e.target.value }))
+                        }
+                        className="w-full px-3 py-2 border border-sand-300 rounded-lg"
+                      />
+                    ) : (
+                      u.email || "—"
+                    )}
+                  </td>
+                  <td className="px-4 py-3 text-sage-800 min-w-[260px]">
+                    {isEditing ? (
                       <PhoneInput
                         value={editDraft.phone}
                         onChange={(v) =>
@@ -333,19 +387,50 @@ const AdminUsers = () => {
                       u.whatsapp || "—"
                     )}
                   </td>
+                  <td className="px-4 py-3 text-sage-800 min-w-[220px]">
+                    {isEditing ? (
+                      <input
+                        type="text"
+                        value={editDraft.temporaryPassword}
+                        onChange={(e) =>
+                          setEditDraft((d) => ({
+                            ...d,
+                            temporaryPassword: e.target.value,
+                          }))
+                        }
+                        placeholder="Leave empty to keep current"
+                        className="w-full px-3 py-2 border border-sand-300 rounded-lg font-mono text-sm"
+                      />
+                    ) : (
+                      "—"
+                    )}
+                  </td>
                   <td className="px-4 py-3">
-                    <select
-                      value={u.role}
-                      onChange={(e) => handleRoleChange(u, e.target.value)}
-                      disabled={isEditing}
-                      className="border border-sand-300 rounded-lg px-2 py-1 text-sm disabled:opacity-60"
-                    >
-                      {ROLE_VALUES.map((r) => (
-                        <option key={r} value={r}>
-                          {r}
-                        </option>
-                      ))}
-                    </select>
+                    {isEditing ? (
+                      <select
+                        value={editDraft.role}
+                        onChange={(e) => handleEditRoleChange(u, e.target.value)}
+                        className="border border-sand-300 rounded-lg px-2 py-1 text-sm"
+                      >
+                        {ROLE_VALUES.map((r) => (
+                          <option key={r} value={r}>
+                            {r}
+                          </option>
+                        ))}
+                      </select>
+                    ) : (
+                      <select
+                        value={u.role}
+                        onChange={(e) => handleRoleChange(u, e.target.value)}
+                        className="border border-sand-300 rounded-lg px-2 py-1 text-sm"
+                      >
+                        {ROLE_VALUES.map((r) => (
+                          <option key={r} value={r}>
+                            {r}
+                          </option>
+                        ))}
+                      </select>
+                    )}
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-2 flex-wrap">
