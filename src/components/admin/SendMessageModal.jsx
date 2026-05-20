@@ -86,23 +86,19 @@ const TEXT = {
 const buildWelcomeMessage = ({
   name,
   email,
-  phone,
   password,
   loginUrl,
   lang,
-  channel,
 }) => {
-  const wantsEmail = channel === "email" || channel === "both";
-  const contact = wantsEmail && email ? email : phone || email || "";
   if (lang === "ar") {
     return (
       `مرحبًا ${name || ""}،\n` +
       `تم إنشاء حسابك بنجاح فى yogaTupia.\n\n` +
       `يمكنك تسجيل الدخول من خلال الرابط:\n${loginUrl}\n\n` +
       `بيانات الدخول:\n` +
-      `${wantsEmail ? "البريد" : "رقم الهاتف"}: ${contact}\n` +
-      (password ? `كلمة المرور المؤقتة: ${password}\n\n` : `\n`) +
-      `يرجى تغيير كلمة المرور بعد أول تسجيل دخول.`
+      (email ? `البريد الإلكتروني: ${email}\n` : "") +
+      (password ? `كلمة المرور المؤقتة: ${password}\n` : "") +
+      `\nيرجى تغيير كلمة المرور بعد أول تسجيل دخول.`
     );
   }
   return (
@@ -110,9 +106,9 @@ const buildWelcomeMessage = ({
     `Your yogaTupia account has been created.\n\n` +
     `You can sign in at:\n${loginUrl}\n\n` +
     `Credentials:\n` +
-    `${wantsEmail ? "Email" : "Phone"}: ${contact}\n` +
-    (password ? `Temporary password: ${password}\n\n` : `\n`) +
-    `Please change your password after your first sign-in.`
+    (email ? `Email: ${email}\n` : "") +
+    (password ? `Temporary password: ${password}\n` : "") +
+    `\nPlease change your password after your first sign-in.`
   );
 };
 
@@ -237,11 +233,9 @@ const SendMessageModal = ({ open, onClose, user, actorId, language }) => {
       return buildWelcomeMessage({
         name: user?.displayName || "",
         email,
-        phone,
         password: tempPassword,
         loginUrl,
         lang,
-        channel,
       });
     }
     return buildResetMessage({
