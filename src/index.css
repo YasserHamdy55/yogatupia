@@ -1,0 +1,69 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Cormorant+Garamond:wght@300;400;500;600;700&family=Cairo:wght@300;400;500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply font-sans text-sage-800 bg-sand-50 antialiased;
+  }
+  
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-serif;
+    color: inherit;
+  }
+
+  /* RTL Support for Arabic */
+  [dir="rtl"] {
+    font-family: 'Cairo', 'Inter', system-ui, sans-serif;
+    letter-spacing: 0.02em;
+  }
+
+  [dir="rtl"] h1,
+  [dir="rtl"] h2,
+  [dir="rtl"] h3,
+  [dir="rtl"] h4,
+  [dir="rtl"] h5,
+  [dir="rtl"] h6 {
+    font-family: 'Cairo', 'Cormorant Garamond', serif;
+    line-height: 1.8;
+    letter-spacing: 0.03em;
+    word-spacing: 0.1em;
+  }
+
+  /* تحسين تباعد النص العربي في العناوين الكبيرة */
+  [dir="rtl"] h1 {
+    line-height: 2;
+    letter-spacing: 0.05em;
+  }
+
+  /* تحسين تباعد الفقرات العربية */
+  [dir="rtl"] p {
+    line-height: 1.9;
+    letter-spacing: 0.02em;
+  }
+}
+
+@layer components {
+  .btn-primary {
+    @apply px-8 py-3 bg-sage-600 text-white rounded-full font-medium hover:bg-sage-700 transition-all duration-300 shadow-md hover:shadow-lg;
+  }
+  
+  .btn-secondary {
+    @apply px-8 py-3 bg-white text-sage-700 border-2 border-sage-600 rounded-full font-medium hover:bg-sage-50 transition-all duration-300;
+  }
+  
+  .card {
+    @apply bg-white rounded-2xl shadow-sm hover:shadow-xl transition-all duration-300 overflow-hidden;
+  }
+  
+  .section-title {
+    @apply text-4xl md:text-5xl font-serif text-sage-900 mb-4;
+  }
+  
+  .section-subtitle {
+    @apply text-lg text-sage-700 max-w-2xl mx-auto;
+  }
+}
+
