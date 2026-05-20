@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { X, MessageCircle, Mail, Send, KeyRound, UserPlus } from "lucide-react";
+import { X, MessageCircle, Mail, Send, KeyRound, UserPlus, Copy, Check } from "lucide-react";
 import { supabase } from "../../lib/supabase";
 import { appendLog, AUDIT_TYPES } from "../../lib/auditLog";
 
@@ -37,6 +37,11 @@ const TEXT = {
     tempPasswordLabel: "Temporary password",
     copy: "Copy",
     copied: "Copied!",
+    credentialsCard: "Login credentials",
+    credentialsHint: "These will appear in the message. Enter the password you set for this user.",
+    loginEmail: "Login email",
+    loginPassword: "Password",
+    whatsapp: "WhatsApp number",
   },
   ar: {
     title: "إرسال رسالة",
@@ -70,6 +75,11 @@ const TEXT = {
     tempPasswordLabel: "كلمة المرور المؤقتة",
     copy: "نسخ",
     copied: "تم النسخ!",
+    credentialsCard: "بيانات الدخول",
+    credentialsHint: "ستظهر هذه البيانات فى الرسالة. أدخل كلمة المرور التى حددتها لهذا المستخدم.",
+    loginEmail: "البريد الإلكتروني للدخول",
+    loginPassword: "كلمة المرور",
+    whatsapp: "رقم الواتساب",
   },
 };
 
@@ -163,6 +173,25 @@ const buildResetMessage = ({ name, email, lang, channel, loginUrl, password }) =
 };
 
 const cleanPhone = (raw) => (raw || "").replace(/[^\d]/g, "");
+
+const CopyButton = ({ text, label, copiedLabel }) => {
+  const [done, setDone] = useState(false);
+  const handleCopy = () => {
+    navigator.clipboard?.writeText(text).catch(() => {});
+    setDone(true);
+    window.setTimeout(() => setDone(false), 1800);
+  };
+  return (
+    <button
+      type="button"
+      onClick={handleCopy}
+      className="inline-flex items-center gap-1 px-2 py-1 rounded border border-sand-300 bg-white hover:bg-sand-50 text-sage-700 text-xs shrink-0"
+    >
+      {done ? <Check size={12} /> : <Copy size={12} />}
+      {done ? copiedLabel : label}
+    </button>
+  );
+};
 
 const SendMessageModal = ({ open, onClose, user, actorId, language }) => {
   const t = TEXT[language] || TEXT.en;
@@ -419,42 +448,73 @@ const SendMessageModal = ({ open, onClose, user, actorId, language }) => {
 
         {step === 2 && (
           <div className="space-y-4">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+
+            {/* Login credentials card — welcome only */}
+            {type === "welcome" && (
+              <div className="rounded-xl border border-sage-200 bg-sage-50 p-4 space-y-3">
+                <p className="text-sm font-semibold text-sage-900">{t.credentialsCard}</p>
+                <p className="text-xs text-sage-600">{t.credentialsHint}</p>
+                <div>
+                  <label className="block text-xs font-medium text-sage-700 mb-1">
+                    {t.loginEmail}
+                  </label>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="email"
+                      value={emailDraft}
+                      onChange={(e) => setEmailDraft(e.target.value)}
+                      className="flex-1 px-3 py-2 border border-sand-300 rounded-lg text-sm bg-white"
+                    />
+                    {emailDraft && (
+                      <CopyButton text={emailDraft} label={t.copy} copiedLabel={t.copied} />
+                    )}
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-sage-700 mb-1">
+                    {t.loginPassword}
+                  </label>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="text"
+                      value={tempPassword}
+                      onChange={(e) => setTempPassword(e.target.value)}
+                      placeholder="••••••••"
+                      className="flex-1 px-3 py-2 border border-sand-300 rounded-lg font-mono text-sm bg-white"
+                    />
+                    {tempPassword && (
+                      <CopyButton text={tempPassword} label={t.copy} copiedLabel={t.copied} />
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* WhatsApp number */}
+            <div>
+              <label className="block text-sm font-medium text-sage-800 mb-1">
+                {t.whatsapp}
+              </label>
+              <input
+                type="tel"
+                value={phoneDraft}
+                onChange={(e) => setPhoneDraft(e.target.value)}
+                className="w-full px-3 py-2 border border-sand-300 rounded-lg text-sm"
+                placeholder="+20..."
+              />
+            </div>
+
+            {/* Email field for reset type */}
+            {type === "reset" && (
               <div>
                 <label className="block text-sm font-medium text-sage-800 mb-1">
-                  {t.channelEmail}
+                  {t.loginEmail}
                 </label>
                 <input
                   type="email"
                   value={emailDraft}
                   onChange={(e) => setEmailDraft(e.target.value)}
                   className="w-full px-3 py-2 border border-sand-300 rounded-lg text-sm"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-sage-800 mb-1">
-                  {t.channelWhatsapp}
-                </label>
-                <input
-                  type="tel"
-                  value={phoneDraft}
-                  onChange={(e) => setPhoneDraft(e.target.value)}
-                  className="w-full px-3 py-2 border border-sand-300 rounded-lg text-sm"
-                  placeholder="+20..."
-                />
-              </div>
-            </div>
-
-            {type === "welcome" && (
-              <div>
-                <label className="block text-sm font-medium text-sage-800 mb-1">
-                  {t.tempPassword}
-                </label>
-                <input
-                  type="text"
-                  value={tempPassword}
-                  onChange={(e) => setTempPassword(e.target.value)}
-                  className="w-full px-3 py-2 border border-sand-300 rounded-lg font-mono text-sm"
                 />
               </div>
             )}
@@ -471,29 +531,18 @@ const SendMessageModal = ({ open, onClose, user, actorId, language }) => {
                   </div>
                 )}
               {type === "reset" && resetTempPassword && (
-                <div className="mb-2 p-2 rounded-md bg-emerald-50 border border-emerald-200 text-emerald-900 text-xs flex items-center justify-between gap-2">
+                <div className="mb-2 p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-900 text-sm flex items-center justify-between gap-2">
                   <span>
                     <strong>{t.tempPasswordLabel}:</strong>{" "}
                     <code className="font-mono">{resetTempPassword}</code>
                   </span>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      navigator.clipboard?.writeText(resetTempPassword);
-                      setMessage(t.copied);
-                      window.setTimeout(() => setMessage(""), 1500);
-                    }}
-                    className="px-2 py-0.5 rounded border border-emerald-300 bg-white hover:bg-emerald-100"
-                  >
-                    {t.copy}
-                  </button>
+                  <CopyButton text={resetTempPassword} label={t.copy} copiedLabel={t.copied} />
                 </div>
               )}
               <textarea
                 value={previewText}
-                onChange={() => {}}
                 readOnly
-                rows={9}
+                rows={8}
                 className="w-full px-3 py-2 border border-sand-300 rounded-lg text-sm font-mono bg-sand-50"
               />
             </div>
