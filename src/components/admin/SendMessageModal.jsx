@@ -42,6 +42,8 @@ const TEXT = {
     loginEmail: "Login email",
     loginPassword: "Password",
     whatsapp: "WhatsApp number",
+    tempPasswordRequired: "Enter the temporary password before sending the welcome message.",
+    tempPasswordMissingHint: "This message will not be sent until you enter the temporary password.",
   },
   ar: {
     title: "إرسال رسالة",
@@ -80,6 +82,8 @@ const TEXT = {
     loginEmail: "البريد الإلكتروني للدخول",
     loginPassword: "كلمة المرور",
     whatsapp: "رقم الواتساب",
+    tempPasswordRequired: "أدخل كلمة المرور المؤقتة قبل إرسال رسالة الترحيب.",
+    tempPasswordMissingHint: "لن يتم إرسال هذه الرسالة حتى تُدخل كلمة المرور المؤقتة.",
   },
 };
 
@@ -208,8 +212,10 @@ const SendMessageModal = ({ open, onClose, user, actorId, language }) => {
   const loginUrl = `${window.location.origin}/login`;
   const phone = cleanPhone(phoneDraft || user?.phone || user?.whatsapp || "");
   const email = (emailDraft || user?.email || "").trim();
+  const trimmedTempPassword = tempPassword.trim();
   const hasPhone = !!phone;
   const hasEmail = !!email;
+  const canSendWelcome = type !== "welcome" || !!trimmedTempPassword;
 
   useEffect(() => {
     if (open) {
@@ -233,7 +239,7 @@ const SendMessageModal = ({ open, onClose, user, actorId, language }) => {
       return buildWelcomeMessage({
         name: user?.displayName || "",
         email,
-        password: tempPassword,
+        password: trimmedTempPassword,
         loginUrl,
         lang,
       });
@@ -293,6 +299,10 @@ const SendMessageModal = ({ open, onClose, user, actorId, language }) => {
     setMessage("");
     setBusy(true);
     try {
+      if (type === "welcome" && !trimmedTempPassword) {
+        throw new Error(t.tempPasswordRequired);
+      }
+
       const subject =
         type === "welcome"
           ? lang === "ar"
@@ -480,6 +490,11 @@ const SendMessageModal = ({ open, onClose, user, actorId, language }) => {
                       <CopyButton text={tempPassword} label={t.copy} copiedLabel={t.copied} />
                     )}
                   </div>
+                  {!trimmedTempPassword && (
+                    <p className="mt-2 text-xs text-amber-700">
+                      {t.tempPasswordMissingHint}
+                    </p>
+                  )}
                 </div>
               </div>
             )}
@@ -595,7 +610,7 @@ const SendMessageModal = ({ open, onClose, user, actorId, language }) => {
               <button
                 type="button"
                 onClick={handleSend}
-                disabled={busy}
+                disabled={busy || !canSendWelcome}
                 className="flex-1 py-2 rounded-lg bg-sage-700 hover:bg-sage-800 text-white text-sm font-medium disabled:opacity-60"
               >
                 {busy
