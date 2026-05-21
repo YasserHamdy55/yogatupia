@@ -300,7 +300,29 @@ const SendMessageModal = ({ open, onClose, user, actorId, language }) => {
     setBusy(true);
     try {
       if (type === "welcome" && !trimmedTempPassword) {
-        throw new Error(t.tempPasswordRequired);
+        const { data, error: fnErr } = await supabase.functions.invoke(
+          "reset-user-password",
+          { body: { userId: user?.id } },
+        );
+        if (fnErr || data?.error || !data?.tempPassword) {
+          throw new Error(
+            fnErr?.message || data?.error || "Failed to generate password.",
+          );
+        }
+        setTempPassword(data.tempPassword);
+        if (data.email) {
+          setEmailDraft(data.email);
+          setResolvedEmail(data.email);
+        }
+        appendLog({
+          type: AUDIT_TYPES.PASSWORD_RESET_REQUESTED,
+          actorId,
+          targetId: user?.id,
+          meta: { method: "temp_password" },
+        });
+        setMessage(t.tempReady);
+        setBusy(false);
+        return;
       }
 
       const subject =

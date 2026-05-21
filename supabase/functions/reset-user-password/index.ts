@@ -136,7 +136,7 @@ Deno.serve(async (req: Request) => {
   // 5) Flag the profile
   const { error: flagErr } = await admin
     .from("profiles")
-    .update({ must_change_password: true })
+    .update({ must_change_password: true, temporary_password: tempPassword })
     .eq("id", targetUserId);
   if (flagErr) {
     return new Response(
