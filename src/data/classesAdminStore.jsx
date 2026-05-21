@@ -4,6 +4,7 @@ import React, {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from "react";
 import { supabase } from "../lib/supabase";
@@ -90,6 +91,18 @@ export const ClassesAdminProvider = ({ children }) => {
   const [items, setItems] = useState(loadInitial);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [saveStatus, setSaveStatus] = useState("idle");
+  const [saveError, setSaveError] = useState("");
+  const [lastSavedAt, setLastSavedAt] = useState(null);
+  const savedTimerRef = useRef(null);
+
+  useEffect(() => {
+    return () => {
+      if (savedTimerRef.current) {
+        clearTimeout(savedTimerRef.current);
+      }
+    };
+  }, []);
 
   const saveRemote = useCallback(async (nextItems) => {
     const { error: upsertError } = await supabase
@@ -152,13 +165,29 @@ export const ClassesAdminProvider = ({ children }) => {
       setItems((prev) => {
         const next = producer(prev);
         persistLocal(next);
+        setSaveStatus("saving");
+        setSaveError("");
 
-        saveRemote(next).catch((err) => {
-          console.error("Failed to save classes to Supabase:", err);
-          setError(err);
-          setItems(prev);
-          persistLocal(prev);
-        });
+        saveRemote(next)
+          .then(() => {
+            setError(null);
+            setSaveStatus("saved");
+            setLastSavedAt(new Date().toISOString());
+            if (savedTimerRef.current) {
+              clearTimeout(savedTimerRef.current);
+            }
+            savedTimerRef.current = setTimeout(() => {
+              setSaveStatus("idle");
+            }, 3000);
+          })
+          .catch((err) => {
+            console.error("Failed to save classes to Supabase:", err);
+            setError(err);
+            setSaveStatus("error");
+            setSaveError(err?.message || "Cloud save failed.");
+            setItems(prev);
+            persistLocal(prev);
+          });
 
         return next;
       });
@@ -209,12 +238,26 @@ export const ClassesAdminProvider = ({ children }) => {
       items,
       loading,
       error,
+      saveStatus,
+      saveError,
+      lastSavedAt,
       updateClass,
       deleteClass,
       addClass,
       resetClasses,
     }),
-    [items, loading, error, updateClass, deleteClass, addClass, resetClasses],
+    [
+      items,
+      loading,
+      error,
+      saveStatus,
+      saveError,
+      lastSavedAt,
+      updateClass,
+      deleteClass,
+      addClass,
+      resetClasses,
+    ],
   );
 
   return (

@@ -27,6 +27,9 @@ const Classes = () => {
   const { isAdmin: adminMode, editMode } = useAdminEdit();
   const {
     items: managedClasses,
+    saveStatus,
+    saveError,
+    lastSavedAt,
     updateClass,
     deleteClass,
     addClass,
@@ -46,10 +49,18 @@ const Classes = () => {
       ? {
           addNew: "إضافة حصة جديدة",
           confirmDelete: "هل أنت متأكد من حذف هذه الحصة؟",
+          saving: "جارٍ حفظ التعديل على السحابة...",
+          saved: "تم حفظ التعديل على السحابة",
+          saveFailed: "فشل حفظ التعديل على السحابة",
+          lastSavedAt: "آخر حفظ",
         }
       : {
           addNew: "Add New Class",
           confirmDelete: "Are you sure you want to delete this class?",
+          saving: "Saving your change to cloud...",
+          saved: "Saved to cloud",
+          saveFailed: "Cloud save failed",
+          lastSavedAt: "Last saved",
         };
 
   const labels = {
@@ -259,6 +270,40 @@ const Classes = () => {
 
       {/* Admin edit banner + Add New */}
       <AdminEditBar onAdd={handleAddClick} addLabel={adminText.addNew} />
+
+      {/* Cloud save state for admin edits */}
+      {adminMode && editMode && saveStatus !== "idle" && (
+        <section className="bg-white border-b border-sand-200">
+          <div className="max-w-7xl mx-auto px-4 py-3">
+            <div
+              className={`rounded-2xl px-4 py-2.5 text-sm font-medium ${{
+                saving: "bg-amber-50 text-amber-900 border border-amber-200",
+                saved: "bg-emerald-50 text-emerald-900 border border-emerald-200",
+                error: "bg-red-50 text-red-900 border border-red-200",
+              }[saveStatus]}`}
+            >
+              {saveStatus === "saving" && adminText.saving}
+              {saveStatus === "saved" && (
+                <>
+                  {adminText.saved}
+                  {lastSavedAt ? (
+                    <span className="opacity-75">
+                      {" "}
+                      ({adminText.lastSavedAt}: {new Date(lastSavedAt).toLocaleTimeString(language === "ar" ? "ar-EG" : "en-US")})
+                    </span>
+                  ) : null}
+                </>
+              )}
+              {saveStatus === "error" && (
+                <>
+                  {adminText.saveFailed}
+                  {saveError ? <span className="opacity-80">: {saveError}</span> : null}
+                </>
+              )}
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* Filters */}
       <section className="bg-white border-b border-sand-200 sticky top-20 z-40 shadow-sm">
