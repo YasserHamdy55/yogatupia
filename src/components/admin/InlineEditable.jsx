@@ -167,7 +167,7 @@ const InlineEditable = ({
   ...rest
 }) => {
   const { language } = useLanguage();
-  const { content, getContentValue, updateContentValue } = useContent();
+  const { content, getContentValue, updateLocalizedContent } = useContent();
   const { isAdmin, editMode } = useAdminEdit();
   const [open, setOpen] = useState(false);
 
@@ -188,8 +188,7 @@ const InlineEditable = ({
     .reduce((acc, key) => acc?.[key], content?.ar);
 
   const handleSave = ({ en, ar }) => {
-    updateContentValue("en", path, en);
-    updateContentValue("ar", path, ar);
+    updateLocalizedContent(path, { en, ar });
     setOpen(false);
   };
 

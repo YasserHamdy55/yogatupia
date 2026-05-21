@@ -60,7 +60,7 @@ const InlineImageEditable = ({
   ...rest
 }) => {
   const { language } = useLanguage();
-  const { getContentValue, updateContentValue } = useContent();
+  const { getContentValue, updateLocalizedContent } = useContent();
   const { isAdmin, editMode } = useAdminEdit();
   const [open, setOpen] = useState(false);
   const t = TEXT[language] ?? TEXT.en;
@@ -76,8 +76,7 @@ const InlineImageEditable = ({
         : Array.isArray(next)
           ? (next[0] ?? "")
           : "";
-    updateContentValue("en", path, value);
-    updateContentValue("ar", path, value);
+    updateLocalizedContent(path, { en: value, ar: value });
     setOpen(false);
   };
 

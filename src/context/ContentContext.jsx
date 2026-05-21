@@ -92,6 +92,7 @@ export const ContentProvider = ({ children }) => {
   }, []);
 
   const saveContent = async (nextContent) => {
+    const prevContent = content;
     try {
       setContent(nextContent);
       setError(null);
@@ -107,17 +108,32 @@ export const ContentProvider = ({ children }) => {
       );
 
       if (err) throw err;
+      return true;
     } catch (err) {
       console.error("Failed to save content:", err);
       setError(err);
-      // Still update local state even if save fails
-      setContent(nextContent);
+      // Revert optimistic update when remote save fails.
+      setContent(prevContent);
+      return false;
     }
   };
 
   const updateContentValue = (language, path, value) => {
     const nextContent = setValueByPath(content, `${language}.${path}`, value);
-    saveContent(nextContent);
+    return saveContent(nextContent);
+  };
+
+  const updateLocalizedContent = (path, { en, ar }) => {
+    let nextContent = content;
+
+    if (en !== undefined) {
+      nextContent = setValueByPath(nextContent, `en.${path}`, en);
+    }
+    if (ar !== undefined) {
+      nextContent = setValueByPath(nextContent, `ar.${path}`, ar);
+    }
+
+    return saveContent(nextContent);
   };
 
   const replaceContent = (nextContent) => {
@@ -145,6 +161,7 @@ export const ContentProvider = ({ children }) => {
       loading,
       error,
       updateContentValue,
+      updateLocalizedContent,
       replaceContent,
       resetContent,
       getContentValue: (language, path, fallback = "") =>
