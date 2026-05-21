@@ -1,7 +1,8 @@
-import React, { createContext, useContext, useMemo, useState } from "react";
+import React, { createContext, useContext, useMemo, useState, useEffect } from "react";
+import { supabase } from "../lib/supabase";
 import { defaultSiteContent } from "../content/defaultSiteContent";
 
-const STORAGE_KEY = "heba-site-content-v1";
+const CONTENT_KEY = "default";
 const ContentContext = createContext();
 
 const isObject = (value) =>
@@ -18,23 +19,6 @@ const deepMerge = (base, override) => {
       key in base ? deepMerge(base[key], override[key]) : override[key];
   });
   return merged;
-};
-
-const getInitialContent = () => {
-  if (typeof window === "undefined") {
-    return defaultSiteContent;
-  }
-
-  const saved = window.localStorage.getItem(STORAGE_KEY);
-  if (!saved) {
-    return defaultSiteContent;
-  }
-
-  try {
-    return deepMerge(defaultSiteContent, JSON.parse(saved));
-  } catch {
-    return defaultSiteContent;
-  }
 };
 
 const getValueByPath = (source, path) =>
@@ -62,12 +46,72 @@ const setValueByPath = (source, path, value) => {
 };
 
 export const ContentProvider = ({ children }) => {
-  const [content, setContent] = useState(getInitialContent);
+  const [content, setContent] = useState(defaultSiteContent);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  const saveContent = (nextContent) => {
-    setContent(nextContent);
-    if (typeof window !== "undefined") {
-      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(nextContent));
+  // Load content from Supabase on mount
+  useEffect(() => {
+    const loadContent = async () => {
+      try {
+        setLoading(true);
+        const { data, error: err } = await supabase
+          .from("site_content")
+          .select("en, ar")
+          .eq("key", CONTENT_KEY)
+          .single();
+
+        if (err && err.code !== "PGRST116") {
+          // PGRST116 = no rows found
+          throw err;
+        }
+
+        if (data) {
+          // Merge fetched content with defaults to ensure all keys exist
+          setContent(
+            deepMerge(defaultSiteContent, {
+              en: data.en || {},
+              ar: data.ar || {},
+            })
+          );
+        } else {
+          // No content in DB yet, use defaults
+          setContent(defaultSiteContent);
+        }
+      } catch (err) {
+        console.error("Failed to load content:", err);
+        setError(err);
+        // Fall back to defaults on error
+        setContent(defaultSiteContent);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadContent();
+  }, []);
+
+  const saveContent = async (nextContent) => {
+    try {
+      setContent(nextContent);
+      setError(null);
+
+      // Try to upsert to Supabase
+      const { error: err } = await supabase.from("site_content").upsert(
+        {
+          key: CONTENT_KEY,
+          en: nextContent.en || {},
+          ar: nextContent.ar || {},
+        },
+        { onConflict: "key" }
+      );
+
+      if (err) throw err;
+    } catch (err) {
+      console.error("Failed to save content:", err);
+      setError(err);
+      // Still update local state even if save fails
+      setContent(nextContent);
     }
   };
 
@@ -77,30 +121,42 @@ export const ContentProvider = ({ children }) => {
   };
 
   const replaceContent = (nextContent) => {
-    saveContent(deepMerge(defaultSiteContent, nextContent));
+    const merged = deepMerge(defaultSiteContent, nextContent);
+    saveContent(merged);
   };
 
-  const resetContent = () => {
-    setContent(defaultSiteContent);
-    if (typeof window !== "undefined") {
-      window.localStorage.removeItem(STORAGE_KEY);
+  const resetContent = async () => {
+    try {
+      setContent(defaultSiteContent);
+      setError(null);
+      // Delete the content row to reset to defaults
+      await supabase.from("site_content").delete().eq("key", CONTENT_KEY);
+    } catch (err) {
+      console.error("Failed to reset content:", err);
+      setError(err);
+      // Still update local state
+      setContent(defaultSiteContent);
     }
   };
 
   const value = useMemo(
     () => ({
       content,
+      loading,
+      error,
       updateContentValue,
       replaceContent,
       resetContent,
       getContentValue: (language, path, fallback = "") =>
         getValueByPath(content[language], path) ?? fallback,
     }),
-    [content],
+    [content, loading, error]
   );
 
   return (
-    <ContentContext.Provider value={value}>{children}</ContentContext.Provider>
+    <ContentContext.Provider value={value}>
+      {children}
+    </ContentContext.Provider>
   );
 };
 
