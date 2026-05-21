@@ -151,6 +151,7 @@ export const AuthProvider = ({ children }) => {
           phone: p.phone || "",
           displayName: p.full_name || "",
           email: p.email || "",
+          temporaryPassword: p.temporary_password || "",
           role: mapDbRoleToAppRole(p.role),
           dbRole: p.role,
           active: true,
@@ -307,6 +308,10 @@ export const AuthProvider = ({ children }) => {
     if ("whatsapp" in patch) dbPatch.phone = patch.whatsapp;
     if (nextEmail) dbPatch.email = nextEmail;
     if (nextRole) dbPatch.role = mapAppRoleToDbRole(nextRole);
+    if (nextPassword) {
+      dbPatch.temporary_password = nextPassword;
+      dbPatch.must_change_password = true;
+    }
 
     if (Object.keys(dbPatch).length > 0) {
       const { error } = await supabase
@@ -327,6 +332,8 @@ export const AuthProvider = ({ children }) => {
               phone: dbPatch.phone ?? u.phone,
               whatsapp: dbPatch.phone ?? u.whatsapp,
               email: dbPatch.email ?? u.email,
+              temporaryPassword:
+                dbPatch.temporary_password ?? u.temporaryPassword,
               role: nextRole ?? u.role,
               dbRole: dbPatch.role ?? u.dbRole,
             }
@@ -376,7 +383,11 @@ export const AuthProvider = ({ children }) => {
 
       const { error: profileSyncErr } = await supabase
         .from("profiles")
-        .update({ email })
+        .update({
+          email,
+          temporary_password: password,
+          must_change_password: true,
+        })
         .eq("id", newUserId);
       if (profileSyncErr) {
         // eslint-disable-next-line no-console
@@ -391,6 +402,7 @@ export const AuthProvider = ({ children }) => {
           phone: phone || "",
           displayName: fullName || "",
           email,
+          temporaryPassword: password,
           role: appRole,
           dbRole,
           active: true,

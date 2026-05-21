@@ -415,7 +415,7 @@ const AdminUsers = () => {
                         className="w-full px-3 py-2 border border-sand-300 rounded-lg font-mono text-sm"
                       />
                     ) : (
-                      "—"
+                      u.temporaryPassword || "—"
                     )}
                   </td>
                   <td className="px-4 py-3">

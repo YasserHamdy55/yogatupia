@@ -95,11 +95,14 @@ const MyAccount = () => {
     try {
       const { error } = await supabase.auth.updateUser({ password: pw });
       if (error) throw error;
-      // Clear the must_change_password flag if it was set
-      if (mustChange && currentUser?.id) {
+      // Password changed successfully: clear temporary password metadata.
+      if (currentUser?.id) {
         await supabase
           .from("profiles")
-          .update({ must_change_password: false })
+          .update({
+            must_change_password: false,
+            temporary_password: null,
+          })
           .eq("id", currentUser.id);
       }
       setPwMessage(t.passwordUpdated);
