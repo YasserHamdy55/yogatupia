@@ -223,7 +223,7 @@ const SendMessageModal = ({ open, onClose, user, actorId, language }) => {
       setPhoneDraft(user?.phone || user?.whatsapp || "");
       setStep(1);
       setType(null);
-      setTempPassword("");
+      setTempPassword(user?.temporaryPassword || "");
       setResetTempPassword("");
       setResolvedEmail("");
       setChannel("whatsapp");

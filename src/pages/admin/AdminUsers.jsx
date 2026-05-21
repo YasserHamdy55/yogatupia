@@ -271,14 +271,27 @@ const AdminUsers = () => {
     }
     setCreating(true);
     try {
-      await createUser({
+      const payload = {
         email: addDraft.email.trim().toLowerCase(),
         password: addDraft.password,
         fullName: addDraft.fullName.trim(),
         phone: addDraft.phone.trim(),
         role: addDraft.role,
-      });
+      };
+
+      const created = await createUser(payload);
       setShowAddModal(false);
+
+      // Open Send Message with auto-filled temp password from the create flow.
+      setMessageUser({
+        id: created?.id,
+        displayName: payload.fullName,
+        email: payload.email,
+        phone: payload.phone,
+        whatsapp: payload.phone,
+        temporaryPassword: payload.password,
+        role: payload.role,
+      });
     } catch (err) {
       setCreateError(err?.message || t.createFailed);
     } finally {
