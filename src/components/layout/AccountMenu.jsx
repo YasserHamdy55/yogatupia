@@ -27,7 +27,7 @@ const TEXT = {
   },
 };
 
-const AccountMenu = () => {
+const AccountMenu = ({ onCloseMobileMenu }) => {
   const { language } = useLanguage();
   const t = TEXT[language] || TEXT.en;
   const { isAuthenticated, currentUser, logout } = useAuth();
@@ -48,12 +48,14 @@ const AccountMenu = () => {
       <div className="flex items-center gap-2">
         <Link
           to="/login"
+          onClick={() => onCloseMobileMenu?.()}
           className="text-sm font-medium text-sage-700 hover:text-sage-900 px-3 py-2 rounded-lg flex items-center gap-1 whitespace-nowrap"
         >
           <LogIn size={16} /> {t.login}
         </Link>
         <Link
           to="/signup"
+          onClick={() => onCloseMobileMenu?.()}
           className="btn-primary !py-2 !px-5 text-sm whitespace-nowrap"
         >
           {t.signup}

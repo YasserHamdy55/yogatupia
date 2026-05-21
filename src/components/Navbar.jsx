@@ -169,7 +169,7 @@ const Navbar = () => {
               {bookNowLabel}
             </Link>
             <div className="mt-3 flex justify-center">
-              <AccountMenu />
+              <AccountMenu onCloseMobileMenu={() => setIsMobileMenuOpen(false)} />
             </div>
           </div>
         </div>
